@@ -1,0 +1,109 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ARVC-HF Risk Calculator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root {--blue:#1f77b4; --orange:#f9a825; --red:#c62828; --green:#2e7d32; --dark:#0b2a5b;}
+body {font-family: Arial, Helvetica, sans-serif; margin:0; background:#f6f8fb; color:#172033;}
+.header {background:linear-gradient(135deg,#0b2a5b,#174a9c); color:white; padding:28px 20px; text-align:center;}
+.header h1 {margin:0; font-size:32px;}
+.header p {margin:8px 0 0; opacity:.92;}
+.container {max-width:920px; margin:28px auto; padding:0 18px;}
+.card {background:white; border-radius:18px; box-shadow:0 8px 30px rgba(20,40,80,.08); padding:24px; margin-bottom:22px;}
+.grid {display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+.input-box {border:1px solid #d9e0ec; border-radius:14px; padding:18px; background:#fbfcff;}
+.input-box h3 {margin:0 0 10px; font-size:18px;}
+label {display:inline-block; margin-right:16px; font-size:16px;}
+.result {border-radius:18px; padding:24px; border-left:10px solid;}
+.low {background:#e8f5e9; border-color:var(--green);}
+.intermediate {background:#fff8e1; border-color:var(--orange);}
+.high {background:#ffebee; border-color:var(--red);}
+.score {font-size:52px; font-weight:800; margin:0;}
+.risk-title {margin:0 0 12px; font-size:26px;}
+table {width:100%; border-collapse:collapse; margin-top:14px;}
+th, td {border-bottom:1px solid #e4e8f0; padding:12px; text-align:left;}
+th {background:#f1f4f9;}
+.badge {display:inline-block; padding:5px 10px; border-radius:999px; font-weight:700;}
+.badge-low {background:#c8e6c9; color:#1b5e20;}
+.badge-intermediate {background:#ffecb3; color:#8a5d00;}
+.badge-high {background:#ffcdd2; color:#8e0000;}
+.footer {color:#5a6578; font-size:13px; line-height:1.5;}
+@media (max-width:760px){.grid{grid-template-columns:1fr}.header h1{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>ARVC-HF Risk Calculator</h1>
+  <p>Research calculator for the 0–3-point ARVC-HF score</p>
+</div>
+<div class="container">
+  <div class="card">
+    <h2>Baseline predictors</h2>
+    <div class="grid">
+      <div class="input-box">
+        <h3>LVEF &lt;50%</h3>
+        <label><input type="radio" name="lvef" value="0"> No</label>
+        <label><input type="radio" name="lvef" value="1"> Yes</label>
+        <label><input type="radio" name="lvef" value="missing" checked> Unknown / Missing</label>
+      </div>
+      <div class="input-box">
+        <h3>Microvoltage on ECG</h3>
+        <label><input type="radio" name="micro" value="0"> No</label>
+        <label><input type="radio" name="micro" value="1"> Yes</label>
+        <label><input type="radio" name="micro" value="missing" checked> Unknown / Missing</label>
+      </div>
+      <div class="input-box">
+        <h3>Multiple P/LP variants</h3>
+        <label><input type="radio" name="double" value="0"> No</label>
+        <label><input type="radio" name="double" value="1"> Yes</label>
+        <label><input type="radio" name="double" value="missing" checked> Unknown / Missing</label>
+      </div>
+    </div>
+  </div>
+  <div id="result" class="result" style="background:#f2f2f2;border-color:#7a8494">
+    <p id="score" class="score">—</p>
+    <h2 id="group" class="risk-title">Score not calculable</h2>
+    <p><strong>5-year risk estimate for this category:</strong> <span id="risk5">—</span></p>
+    <p><strong>10-year risk estimate for this category:</strong> <span id="risk10">—</span></p>
+    <p id="interpretation">All three score components must be known. Missing information is not assigned 0 points.</p>
+  </div>
+  <div class="card">
+    <h2>Risk categories</h2>
+    <p>These are Kaplan–Meier estimates for each risk category in the derivation cohort.</p>
+    <table>
+      <thead><tr><th>Score</th><th>Risk group</th><th>5-year risk</th><th>10-year risk</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td><span class="badge badge-low">Low</span></td><td>0.0%</td><td>0.7%</td></tr>
+        <tr><td>1</td><td><span class="badge badge-intermediate">Intermediate</span></td><td>5.2%</td><td>12.7%</td></tr>
+        <tr><td>≥2</td><td><span class="badge badge-high">High</span></td><td>12.5%</td><td>27.1%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card footer">
+    <strong>Research use:</strong> This calculator reports estimates for groups of patients. It does not provide treatment recommendations. Inputs are processed in the browser.
+  </div>
+</div>
+<script>
+function getRadio(name){return document.querySelector('input[name="'+name+'"]:checked').value;}
+function updateScore(){
+  const vals=[getRadio("lvef"),getRadio("micro"),getRadio("double")];
+  const result=document.getElementById("result"), scoreEl=document.getElementById("score"), groupEl=document.getElementById("group");
+  const risk5El=document.getElementById("risk5"), risk10El=document.getElementById("risk10"), interpEl=document.getElementById("interpretation");
+  result.className="result"; result.removeAttribute("style");
+  if(vals.includes("missing")){
+    result.style.background="#f2f2f2"; result.style.borderColor="#7a8494"; scoreEl.textContent="—"; groupEl.textContent="Score not calculable";
+    risk5El.textContent="—"; risk10El.textContent="—"; interpEl.textContent="All three score components must be known. Missing information is not assigned 0 points."; return;
+  }
+  const score=vals.reduce((a,v)=>a+parseInt(v),0); scoreEl.textContent=score;
+  if(score===0){result.classList.add("low"); groupEl.textContent="Low risk"; risk5El.textContent="0.0%"; risk10El.textContent="0.7%"; interpEl.textContent="Risk estimates are for the corresponding category in the derivation cohort.";}
+  else if(score===1){result.classList.add("intermediate"); groupEl.textContent="Intermediate risk"; risk5El.textContent="5.2%"; risk10El.textContent="12.7%"; interpEl.textContent="Risk estimates are for the corresponding category in the derivation cohort.";}
+  else {result.classList.add("high"); groupEl.textContent="High risk"; risk5El.textContent="12.5%"; risk10El.textContent="27.1%"; interpEl.textContent="Risk estimates are for the corresponding category in the derivation cohort.";}
+}
+document.querySelectorAll("input").forEach(el=>el.addEventListener("change",updateScore));
+updateScore();
+</script>
+</body>
+</html>
